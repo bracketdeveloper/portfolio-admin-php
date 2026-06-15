@@ -1,95 +1,73 @@
 <?php 
-$page_title = "View Skill Details"; 
+$page_title = "Edit Skill Details"; 
 $page = "skills"; 
 include('includes/header.php'); 
 
-// Grab the ID from the URL parameter string (?id=X)
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 1;
 
-// Simulated dataset mimicking database/API collection lookup matches
+// Dummy dataset lookup matching skills array
 $skills_dataset = [
-    1 => [
-        "id" => 1,
-        "name" => "React",
-        "strength" => 90,
-        "category" => "Frontend",
-        "category_sort" => 1,
-        "sort_order" => 1
-    ],
-    2 => [
-        "id" => 2,
-        "name" => "Vue.js",
-        "strength" => 85,
-        "category" => "Frontend",
-        "category_sort" => 1,
-        "sort_order" => 2
-    ],
-    3 => [
-        "id" => 3,
-        "name" => "PHP / Laravel",
-        "strength" => 95,
-        "category" => "Backend",
-        "category_sort" => 2,
-        "sort_order" => 1
-    ],
-    4 => [
-        "id" => 4,
-        "name" => "Node.js",
-        "strength" => 80,
-        "category" => "Backend",
-        "category_sort" => 2,
-        "sort_order" => 2
-    ]
+    1 => ["id" => 1, "name" => "React", "strength" => 90, "category_id" => 1, "sort_order" => 1],
+    2 => ["id" => 2, "name" => "PHP / Laravel", "strength" => 95, "category_id" => 2, "sort_order" => 1],
+    3 => ["id" => 3, "name" => "Docker", "strength" => 75, "category_id" => 3, "sort_order" => 1]
 ];
 
-// Fallback logic if ID doesn't exist in dummy collection
+// Dummy categories table payload to populate the dropdown menu options
+$categories = [
+    ["id" => 1, "name" => "Frontend"],
+    ["id" => 2, "name" => "Backend"],
+    ["id" => 3, "name" => "DevOps / Tools"]
+];
+
 $skill = isset($skills_dataset[$id]) ? $skills_dataset[$id] : $skills_dataset[1];
 ?>
 
 <div class="container-fluid">
     <div class="mb-4">
-        <a href="skills.php" class="btn btn-sm btn-outline-secondary">&larr; Back to List</a>
+        <a href="skills.php" class="btn btn-sm btn-outline-secondary">&larr; Cancel and Return</a>
     </div>
 
     <div class="card shadow-sm" style="max-width: 600px;">
-        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Skill Configuration Info</h5>
-            <a href="skill-edit.php?id=<?php echo $skill['id']; ?>" class="btn btn-sm btn-light">Edit</a>
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Modify Skill Configurations (ID: #<?php echo $skill['id']; ?>)</h5>
         </div>
-        <div class="card-body">
-            <table class="table table-bordered mb-0">
-                <tr>
-                    <th class="bg-light" style="width: 35%;">Category Tab</th>
-                    <td>
-                        <span class="badge bg-primary"><?php echo htmlspecialchars($skill['category']); ?></span>
-                    </td>
-                </tr>
-                <tr>
-                    <th class="bg-light">Tab Sort Order</th>
-                    <td><span class="badge bg-dark"><?php echo $skill['category_sort']; ?></span></td>
-                </tr>
-                <tr>
-                    <th class="bg-light">Skill Name</th>
-                    <td class="fw-bold"><?php echo htmlspecialchars($skill['name']); ?></td>
-                </tr>
-                <tr>
-                    <th class="bg-light">Skill Sort Order</th>
-                    <td><?php echo $skill['sort_order']; ?></td>
-                </tr>
-                <tr>
-                    <th class="bg-light">Strength Metric</th>
-                    <td>
-                        <div class="d-flex align-items-center gap-2 mt-1">
-                            <div class="progress flex-grow-1" style="height: 12px;">
-                                <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $skill['strength']; ?>%;"></div>
-                            </div>
-                            <span class="fw-bold text-dark"><?php echo $skill['strength']; ?>/100</span>
-                        </div>
-                    </td>
-                </tr>
-            </table>
-        </div>
+        <form action="skills.php" method="POST">
+            <div class="card-body">
+                
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Select Target Category</label>
+                    <select class="form-select" name="category_id" required>
+                        <?php foreach ($categories as $cat): ?>
+                            <option value="<?php echo $cat['id']; ?>" <?php echo ($skill['category_id'] == $cat['id']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($cat['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Skill Name</label>
+                    <input type="text" class="form-control" name="name" value="<?php echo htmlspecialchars($skill['name']); ?>" required>
+                </div>
+
+                <div class="row g-3 mb-2">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Strength (1-100)</label>
+                        <input type="number" class="form-control" name="strength" value="<?php echo $skill['strength']; ?>" min="1" max="100" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Skill Sort Order</label>
+                        <input type="number" class="form-control" name="sort_order" value="<?php echo $skill['sort_order']; ?>" min="1" required>
+                    </div>
+                </div>
+
+            </div>
+            <div class="card-footer bg-light d-flex justify-content-end gap-2">
+                <a href="skills.php" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-success px-4">Update Skill</button>
+            </div>
+        </form>
     </div>
 </div>
 
-<?php include('includes/footer.php'); ?> 
+<?php include('includes/footer.php'); ?>
