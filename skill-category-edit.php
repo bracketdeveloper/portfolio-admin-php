@@ -1,4 +1,5 @@
-<?php 
+<?php
+ob_start();
 if (file_exists('.env')) {
     $lines = file('.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
@@ -30,7 +31,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    //curl_close($ch);
 
     if ($httpCode === 200 || $httpCode === 204) {
         header("Location: skill-categories.php?success=1");
