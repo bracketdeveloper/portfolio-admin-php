@@ -1,4 +1,76 @@
 <?php 
+ob_start();
+
+if (file_exists('.env')) {
+    $lines = file('.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0) continue;
+        list($name, $value) = explode('=', $line, 2);
+        $_ENV[trim($name)] = trim($value);
+    }
+}
+
+$apiKey = $_ENV['API_KEY'] ?? '';
+$apiUrl = 'https://portfolio-api-wine-seven.vercel.app/api/experiences';
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Process tech array stack input strings into clean JSON arrays
+    $techInput = isset($_POST['tech_stack']) ? trim($_POST['tech_stack']) : '';
+    $techArray = [];
+    if ($techInput !== '') {
+        $techArray = array_map('trim', explode(',', $techInput));
+        $techArray = array_values(array_filter($techArray));
+    }
+
+    // Standardize bullet items from plain text area inputs into structural clean items array
+    $bulletsInput = isset($_POST['bullets']) ? trim($_POST['bullets']) : '';
+    $bulletsArray = [];
+    if ($bulletsInput !== '') {
+        $lines = explode("\n", str_replace("\r", "", $bulletsInput));
+        foreach ($lines as $line) {
+            $cleanedLine = trim($line);
+            if ($cleanedLine !== '') {
+                // Remove bullet markers if manually provided by the operator
+                $cleanedLine = ltrim($cleanedLine, "•-* \t\xA0");
+                if (trim($cleanedLine) !== '') {
+                    $bulletsArray[] = trim($cleanedLine);
+                }
+            }
+        }
+    }
+
+    $dataToUpdate = [
+        "role"       => $_POST['role'],
+        "company"    => $_POST['company'],
+        "location"   => $_POST['location'],
+        "period"     => $_POST['period'],
+        "sort_order" => (int)$_POST['sort_order'],
+        "tech_array" => $techArray,
+        "bullets"    => $bulletsArray
+    ];
+
+    $ch = curl_init($apiUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($dataToUpdate));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'X-API-KEY: ' . $apiKey
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    // curl_close($ch);
+
+    if ($httpCode === 201) {
+        header("Location: experiences.php?success=1");
+        exit();
+    } else {
+        header("Location: experiences.php?error=" . urlencode("Failed to save experience log entry. HTTP Code: " . $httpCode));
+        exit();
+    }
+}
+
 $page_title = "Add Work Experience"; 
 $page = "experience"; 
 include('includes/header.php'); 
@@ -11,9 +83,9 @@ include('includes/header.php');
 
     <div class="card shadow-sm mb-5">
         <div class="card-header bg-dark text-white">
-            <h5 class="mb-0">Create History Log Entry</h5>
+            <h5 class="mb-0">Add New Experience</h5>
         </div>
-        <form action="experiences.php" method="POST">
+        <form action="experience-add.php" method="POST">
             <div class="card-body">
                 
                 <div class="row g-3 mb-3">
