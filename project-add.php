@@ -1,14 +1,76 @@
 <?php 
+ob_start();
+
+if (file_exists('.env')) {
+    $lines = file('.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0) continue;
+        list($name, $value) = explode('=', $line, 2);
+        $_ENV[trim($name)] = trim($value);
+    }
+}
+
+$apiKey = $_ENV['API_KEY'] ?? '';
+$projectsApiUrl = 'https://portfolio-api-wine-seven.vercel.app/api/projects';
+$categoriesApiUrl = 'https://portfolio-api-wine-seven.vercel.app/api/project-categories';
+
+$context = stream_context_create([
+    'http' => [
+        'header' => "X-API-KEY: " . $apiKey . "\r\n"
+    ]
+]);
+
+// Handle dynamic category collection retrieval
+$categoriesResponse = @file_get_contents($categoriesApiUrl, false, $context);
+$categories = [];
+if ($categoriesResponse !== false) {
+    $decodedCats = json_decode($categoriesResponse, true);
+    $categories = isset($decodedCats[0]) ? $decodedCats : ($decodedCats['data'] ?? []);
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Process comma-separated technologies string into an explicit array context
+    $techInput = $_POST['tech_stack'] ?? '';
+    $techArray = !empty($techInput) ? array_map('trim', explode(',', $techInput)) : [];
+
+    $dataToInsert = [
+        "title"       => $_POST['title'],
+        "category_id" => (int)$_POST['category_id'],
+        "tech_array"  => $techArray,
+        "github"      => $_POST['github'],
+        "demo"        => $_POST['demo'] ?? '',
+        "sort_order"  => (int)$_POST['sort_order'],
+        "description" => $_POST['description'],
+        "challenge"   => $_POST['challenge'],
+        "solution"    => $_POST['solution'],
+        "metrics"     => $_POST['metrics']
+    ];
+
+    $ch = curl_init($projectsApiUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($dataToInsert));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'X-API-KEY: ' . $apiKey
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    // curl_close($ch);
+
+    if ($httpCode === 200 || $httpCode === 201) {
+        header("Location: projects.php?success=1");
+        exit();
+    } else {
+        header("Location: projects.php?error=" . urlencode("Failed to create portfolio entry. HTTP Code: " . $httpCode));
+        exit();
+    }
+}
+
 $page_title = "Add New Project"; 
 $page = "projects"; 
 include('includes/header.php'); 
-
-// Dummy categories array to populate the dropdown menu
-$categories = [
-    ["id" => 1, "name" => "Web Applications"],
-    ["id" => 2, "name" => "Mobile Apps"],
-    ["id" => 3, "name" => "Open Source Tools"]
-];
 ?>
 
 <div class="container-fluid">
@@ -20,7 +82,7 @@ $categories = [
         <div class="card-header bg-dark text-white">
             <h5 class="mb-0">Create Project Portfolio Entry</h5>
         </div>
-        <form action="projects.php" method="POST">
+        <form action="project-add.php" method="POST">
             <div class="card-body">
                 
                 <div class="row g-3 mb-3">
@@ -30,10 +92,10 @@ $categories = [
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Category Selection</label>
-                        <select class="form-select" name="category" required>
+                        <select class="form-select" name="category_id" required>
                             <option value="" selected disabled>Choose category...</option>
                             <?php foreach ($categories as $cat): ?>
-                                <option value="<?php echo htmlspecialchars($cat['name']); ?>"><?php echo htmlspecialchars($cat['name']); ?></option>
+                                <option value="<?php echo (int)$cat['id']; ?>"><?php echo htmlspecialchars($cat['name']); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
