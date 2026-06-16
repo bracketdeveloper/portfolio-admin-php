@@ -4,7 +4,7 @@ if (file_exists('.env')) {
     foreach ($lines as $line) {
         if (strpos(trim($line), '#') === 0) continue;
         list($name, $value) = explode('=', $line, 2);
-        $_ENV[trim($name)] = trim($value);
+        $_ENV[trim($name)] = trim($value); 
     }
 }
 
