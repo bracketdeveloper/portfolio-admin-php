@@ -1,5 +1,6 @@
 <?php 
 ob_start();
+
 if (file_exists('.env')) {
     $lines = file('.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
@@ -12,9 +13,37 @@ if (file_exists('.env')) {
 $apiKey = $_ENV['API_KEY'] ?? '';
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $apiUrl = 'https://portfolio-api-wine-seven.vercel.app/api/skill-categories';
+$skillsApiUrl = 'https://portfolio-api-wine-seven.vercel.app/api/skills';
+
+$context = stream_context_create([
+    'http' => [
+        'header' => "X-API-KEY: " . $apiKey . "\r\n"
+    ]
+]);
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_id'])) {
     $deleteId = (int)$_POST['delete_id'];
+
+    // Check if any skills are linked to this category id before calling DELETE
+    $skillsResponse = file_get_contents($skillsApiUrl, false, $context);
+    $hasLinkedSkills = false;
+
+    if ($skillsResponse !== false) {
+        $decodedSkills = json_decode($skillsResponse, true);
+        $skillsList = isset($decodedSkills[0]) ? $decodedSkills : ($decodedSkills['data'] ?? []);
+        
+        foreach ($skillsList as $skill) {
+            if (isset($skill['category_id']) && (int)$skill['category_id'] === $deleteId) {
+                $hasLinkedSkills = true;
+                break;
+            }
+        }
+    }
+
+    if ($hasLinkedSkills) {
+        header("Location: skill-categories.php?error=" . urlencode("Cannot delete category. This skill category is linked to active skills. Please reassign or delete the skills first."));
+        exit();
+    }
 
     $ch = curl_init($apiUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -38,13 +67,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_id'])) {
     }
 }
 
-$context = stream_context_create([
-    'http' => [
-        'header' => "X-API-KEY: " . $apiKey . "\r\n"
-    ]
-]);
 $response = file_get_contents($apiUrl, false, $context);
-
 $category = null;
 $is_found = false;
 
@@ -93,8 +116,8 @@ include('includes/header.php');
                 <p class="text-muted small">Deleting this entry might affect skills bound to this entity tier downstream.</p>
                 
                 <div class="p-3 bg-light rounded border mb-2">
-                    <strong>Target Name:</strong> <?php echo htmlspecialchars($category['name']); ?><br>
-                    <strong>Sort Priority Index:</strong> <?php echo $category['sort_order']; ?>
+                    <strong>Target Name:</strong> <?php echo htmlspecialchars($category['name'] ?? ''); ?><br>
+                    <strong>Sort Priority Index:</strong> <?php echo (int)($category['sort_order'] ?? 0); ?>
                 </div>
             </div>
             <form action="skill-category-delete.php?id=<?php echo $category['id']; ?>" method="POST">

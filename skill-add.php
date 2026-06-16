@@ -1,14 +1,67 @@
 <?php 
+ob_start();
+
+if (file_exists('.env')) {
+    $lines = file('.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0) continue;
+        list($name, $value) = explode('=', $line, 2);
+        $_ENV[trim($name)] = trim($value);
+    }
+}
+
+$apiKey = $_ENV['API_KEY'] ?? '';
+$categoriesApiUrl = 'https://portfolio-api-wine-seven.vercel.app/api/skill-categories';
+$skillsApiUrl = 'https://portfolio-api-wine-seven.vercel.app/api/skills';
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $dataToSave = [
+        "category_id" => (int)$_POST['category_id'],
+        "name"        => $_POST['name'],
+        "strength"    => (int)$_POST['strength'],
+        "sort_order"  => (int)$_POST['sort_order']
+    ];
+
+    $ch = curl_init($skillsApiUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($dataToSave));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'X-API-KEY: ' . $apiKey
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    // curl_close($ch);
+
+    if ($httpCode === 201 || $httpCode === 200) {
+        header("Location: skills.php?success=1");
+        exit();
+    } else {
+        header("Location: skills.php?error=" . urlencode("Failed to save skill details. HTTP Code: " . $httpCode));
+        exit();
+    }
+}
+
+$context = stream_context_create([
+    'http' => [
+        'header' => "X-API-KEY: " . $apiKey . "\r\n"
+    ]
+]);
+$categoriesResponse = file_get_contents($categoriesApiUrl, false, $context);
+
+$categories = [];
+if ($categoriesResponse !== false) {
+    $decodedCategories = json_decode($categoriesResponse, true);
+    if (is_array($decodedCategories)) {
+        $categories = isset($decodedCategories[0]) ? $decodedCategories : ($decodedCategories['data'] ?? []);
+    }
+}
+
 $page_title = "Add Skill Details"; 
 $page = "skills"; 
 include('includes/header.php'); 
-
-// Dummy tracking categories payload to populate the functional dropdown menu
-$categories = [
-    ["id" => 1, "name" => "Frontend"],
-    ["id" => 2, "name" => "Backend"],
-    ["id" => 3, "name" => "DevOps / Tools"]
-];
 ?>
 
 <div class="container-fluid">
@@ -20,7 +73,7 @@ $categories = [
         <div class="card-header bg-dark text-white">
             <h5 class="mb-0">Add New Skill Details</h5>
         </div>
-        <form action="skills.php" method="POST">
+        <form action="skill-add.php" method="POST">
             <div class="card-body">
                 
                 <div class="mb-3">

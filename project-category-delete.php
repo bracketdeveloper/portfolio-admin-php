@@ -13,9 +13,37 @@ if (file_exists('.env')) {
 $apiKey = $_ENV['API_KEY'] ?? '';
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $apiUrl = 'https://portfolio-api-wine-seven.vercel.app/api/project-categories';
+$projectsApiUrl = 'https://portfolio-api-wine-seven.vercel.app/api/projects';
+
+$context = stream_context_create([
+    'http' => [
+        'header' => "X-API-KEY: " . $apiKey . "\r\n"
+    ]
+]);
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_id'])) {
     $deleteId = (int)$_POST['delete_id'];
+
+    // Check if any projects are linked to this category id before calling DELETE
+    $projectsResponse = @file_get_contents($projectsApiUrl, false, $context);
+    $hasLinkedProjects = false;
+
+    if ($projectsResponse !== false) {
+        $decodedProjects = json_decode($projectsResponse, true);
+        $projectsList = isset($decodedProjects[0]) ? $decodedProjects : ($decodedProjects['data'] ?? []);
+        
+        foreach ($projectsList as $project) {
+            if (isset($project['category_id']) && (int)$project['category_id'] === $deleteId) {
+                $hasLinkedProjects = true;
+                break;
+            }
+        }
+    }
+
+    if ($hasLinkedProjects) {
+        header("Location: project-categories.php?error=" . urlencode("Cannot delete category. This project category is linked to active projects. Please reassign or delete the projects first."));
+        exit();
+    }
 
     $ch = curl_init($apiUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -39,13 +67,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_id'])) {
     }
 }
 
-$context = stream_context_create([
-    'http' => [
-        'header' => "X-API-KEY: " . $apiKey . "\r\n"
-    ]
-]);
 $response = file_get_contents($apiUrl, false, $context);
-
 $category = null;
 $is_found = false;
 
@@ -94,8 +116,8 @@ include('includes/header.php');
                 <p class="text-muted small">Deleting this entry might affect projects bound to this category downstream.</p>
                 
                 <div class="p-3 bg-light rounded border mb-2">
-                    <strong>Target Name:</strong> <?php echo htmlspecialchars($category['name']); ?><br>
-                    <strong>Sort Priority Index:</strong> <?php echo $category['sort_order']; ?>
+                    <strong>Target Name:</strong> <?php echo htmlspecialchars($category['name'] ?? ''); ?><br>
+                    <strong>Sort Priority Index:</strong> <?php echo (int)($category['sort_order'] ?? 0); ?>
                 </div>
             </div>
             <form action="project-category-delete.php?id=<?php echo $category['id']; ?>" method="POST">
