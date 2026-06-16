@@ -39,7 +39,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     $updateResponse = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    //curl_close($ch);
 
     if ($httpCode === 200 || $httpCode === 204) {
         header("Location: about.php?success=1");
