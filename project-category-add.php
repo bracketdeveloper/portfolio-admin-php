@@ -1,4 +1,46 @@
 <?php 
+ob_start();
+
+if (file_exists('.env')) {
+    $lines = file('.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0) continue;
+        list($name, $value) = explode('=', $line, 2);
+        $_ENV[trim($name)] = trim($value);
+    }
+}
+
+$apiKey = $_ENV['API_KEY'] ?? '';
+$apiUrl = 'https://portfolio-api-wine-seven.vercel.app/api/project-categories';
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $dataToUpdate = [
+        "name"       => $_POST['name'],
+        "sort_order" => (int)$_POST['sort_order']
+    ];
+
+    $ch = curl_init($apiUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($dataToUpdate));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'X-API-KEY: ' . $apiKey
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    // curl_close($ch);
+
+    if ($httpCode === 201) {
+        header("Location: project-categories.php?success=1");
+        exit();
+    } else {
+        header("Location: project-categories.php?error=" . urlencode("Failed to create category. HTTP Code: " . $httpCode));
+        exit();
+    }
+}
+
 $page_title = "Add Project Category"; 
 $page = "project-categories"; 
 include('includes/header.php'); 
@@ -13,7 +55,7 @@ include('includes/header.php');
         <div class="card-header bg-dark text-white">
             <h5 class="mb-0">Create New Project Category</h5>
         </div>
-        <form action="project-categories.php" method="POST">
+        <form action="project-category-add.php" method="POST">
             <div class="card-body">
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Category Name</label>
