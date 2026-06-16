@@ -42,7 +42,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit();
     }
 }
-
+ 
 // 3. Fetch live data from API for GET request
 $context = stream_context_create([
     'http' => [
