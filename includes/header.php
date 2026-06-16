@@ -17,13 +17,16 @@
 
     <nav class="navbar navbar-dark bg-dark sticky-top">
         <div class="container-fluid">
+            <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
             <a class="navbar-brand font-monospace fw-bold" href="index.php">ADMIN PANEL</a>
-            <span class="navbar-text text-white">Welcome, Admin</span>
+            <span class="navbar-text text-white d-none d-md-block">Welcome, Admin</span>
         </div>
     </nav>
 
     <div class="d-flex flex-grow-1">
-        <div class="sidebar p-3 d-none d-md-block">
+        <div id="sidebarMenu" class="sidebar p-3 collapse d-md-block">
             <ul class="nav nav-pills flex-column mb-auto">
                 <li class="nav-item mb-2">
                     <a href="about.php" class="nav-link <?php echo (isset($page) && $page == 'about') ? 'active' : ''; ?>">About</a>
@@ -53,3 +56,4 @@
         </div>
 
         <main class="content">
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
