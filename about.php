@@ -1,9 +1,5 @@
 <?php 
-$page_title = "About Management"; 
-$page = "about"; 
-include('includes/header.php'); 
-
-// Load environmental variables manually from .env file
+// 1. Load environmental variables manually from .env file
 if (file_exists('.env')) {
     $lines = file('.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
@@ -15,10 +11,8 @@ if (file_exists('.env')) {
 
 $apiKey = $_ENV['API_KEY'] ?? '';
 $apiUrl = 'https://portfolio-api-wine-seven.vercel.app/api/about';
-$show_success = isset($_GET['success']);
-$error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : false;
 
-// 1. Handle Form Submission (PUT request)
+// 2. Handle Form Submission (PUT request) - MUST RUN BEFORE ANY HTML OUTPUT
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $dataToUpdate = [
         "experience_years" => (int)$_POST['experience_years'],
@@ -39,7 +33,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     $updateResponse = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    //curl_close($ch);
 
     if ($httpCode === 200 || $httpCode === 204) {
         header("Location: about.php?success=1");
@@ -50,7 +43,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 
-// 2. Fetch live data from API for GET request
+// 3. Fetch live data from API for GET request
 $context = stream_context_create([
     'http' => [
         'header' => "X-API-KEY: " . $apiKey . "\r\n"
@@ -77,6 +70,14 @@ if ($response !== false) {
         "description" => "Full-stack developer specializing in building scalable web applications using PHP, Laravel, React, and Node.js."
     ];
 }
+
+// 4. Now set configuration variables and render layouts safely
+$page_title = "About Management"; 
+$page = "about"; 
+include('includes/header.php'); 
+
+$show_success = isset($_GET['success']);
+$error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : false;
 ?>
 
 <div class="container-fluid">
