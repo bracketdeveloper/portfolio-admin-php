@@ -3,36 +3,97 @@ $page_title = "About Management";
 $page = "about"; 
 include('includes/header.php'); 
 
-// 1. Initial Local Data (Simulating database/API data)
-$about = [
-    "experience_years" => 5,
-    "projects_built" => 42,
-    "happy_clients" => 30,
-    "core_stack" => 8,
-    "description" => "Full-stack developer specializing in building scalable web applications using PHP, Laravel, React, and Node.js."
-];
+// Load environmental variables manually from .env file
+if (file_exists('.env')) {
+    $lines = file('.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0) continue;
+        list($name, $value) = explode('=', $line, 2);
+        $_ENV[trim($name)] = trim($value);
+    }
+}
 
-// 2. Simulate Local Form Processing (Temporary until API integration)
-$show_success = false;
+$apiKey = $_ENV['API_KEY'] ?? '';
+$apiUrl = 'https://portfolio-api-wine-seven.vercel.app/api/about';
+$show_success = isset($_GET['success']);
+$error_message = isset($_GET['error']) ? htmlspecialchars($_GET['error']) : false;
+
+// 1. Handle Form Submission (PUT request)
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $about['experience_years'] = $_POST['experience_years'];
-    $about['projects_built'] = $_POST['projects_built'];
-    $about['happy_clients'] = $_POST['happy_clients'];
-    $about['core_stack'] = $_POST['core_stack'];
-    $about['description'] = $_POST['description'];
-    $show_success = true;
+    $dataToUpdate = [
+        "experience_years" => (int)$_POST['experience_years'],
+        "projects_built"   => (int)$_POST['projects_built'],
+        "happy_clients"    => (int)$_POST['happy_clients'],
+        "core_stack_count" => (int)$_POST['core_stack'],
+        "description"      => $_POST['description']
+    ];
+
+    $ch = curl_init($apiUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($dataToUpdate));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'X-API-KEY: ' . $apiKey
+    ]);
+
+    $updateResponse = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode === 200 || $httpCode === 204) {
+        header("Location: about.php?success=1");
+        exit();
+    } else {
+        header("Location: about.php?error=" . urlencode("Failed to update profile via API. HTTP Code: " . $httpCode));
+        exit();
+    }
+}
+
+// 2. Fetch live data from API for GET request
+$context = stream_context_create([
+    'http' => [
+        'header' => "X-API-KEY: " . $apiKey . "\r\n"
+    ]
+]);
+$response = file_get_contents($apiUrl, false, $context);
+
+if ($response !== false) {
+    $apiData = json_decode($response, true);
+    
+    $about = [
+        "experience_years" => $apiData['experience_years'] ?? 0,
+        "projects_built"   => $apiData['projects_built'] ?? 0,
+        "happy_clients"    => $apiData['happy_clients'] ?? 0,
+        "core_stack"       => $apiData['core_stack_count'] ?? 0, 
+        "description"      => $apiData['description'] ?? ""
+    ];
+} else {
+    $about = [
+        "experience_years" => 5,
+        "projects_built" => 42,
+        "happy_clients" => 30,
+        "core_stack" => 8,
+        "description" => "Full-stack developer specializing in building scalable web applications using PHP, Laravel, React, and Node.js."
+    ];
 }
 ?>
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>About Management</h2>
-        <span class="badge bg-secondary">Static Mode</span>
     </div>
 
     <?php if ($show_success): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            Changes simulated successfully! (Ready to connect to API later).
+            Profile updated successfully via API!
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($error_message): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <?php echo $error_message; ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     <?php endif; ?>
