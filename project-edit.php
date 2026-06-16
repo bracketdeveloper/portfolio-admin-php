@@ -96,16 +96,17 @@ if ($projectsResponse !== false) {
             
             $tech_string = implode(", ", array_map('trim', $techArray));
 
+            // Prevent passing array structures into description/challenge/solution/metrics text fields
             $project = [
                 "id"          => (int)$item['id'],
-                "title"       => $item['title'] ?? '',
+                "title"       => is_array($item['title'] ?? '') ? implode(' ', $item['title']) : ($item['title'] ?? ''),
                 "category_id" => isset($item['category_id']) ? (int)$item['category_id'] : 0,
-                "github"      => $item['github'] ?? '',
-                "demo"        => $item['demo'] ?? '',
-                "description" => $item['description'] ?? '',
-                "challenge"   => $item['challenge'] ?? '',
-                "solution"    => $item['solution'] ?? '',
-                "metrics"     => $item['metrics'] ?? '',
+                "github"      => is_array($item['github'] ?? '') ? implode(' ', $item['github']) : ($item['github'] ?? ''),
+                "demo"        => is_array($item['demo'] ?? '') ? implode(' ', $item['demo']) : ($item['demo'] ?? ''),
+                "description" => is_array($item['description'] ?? '') ? implode(' ', $item['description']) : ($item['description'] ?? ''),
+                "challenge"   => is_array($item['challenge'] ?? '') ? implode(' ', $item['challenge']) : ($item['challenge'] ?? ''),
+                "solution"    => is_array($item['solution'] ?? '') ? implode(' ', $item['solution']) : ($item['solution'] ?? ''),
+                "metrics"     => is_array($item['metrics'] ?? '') ? implode(' ', $item['metrics']) : ($item['metrics'] ?? ''),
                 "sort_order"  => (int)($item['sort_order'] ?? 0)
             ];
             $is_found = true;
